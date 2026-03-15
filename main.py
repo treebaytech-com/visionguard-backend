@@ -23,7 +23,8 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-reader = easyocr.Reader(["en", "hi"], gpu=False)
+# EasyOCR REMOVED - too heavy for free tier (needs 2GB+ RAM)
+# Using lightweight regex-based analysis instead
 
 SENSITIVE_KEYWORDS = [
     "aadhaar", "aadhar", "pan", "passport", "driving licence", "driving license",
@@ -37,6 +38,15 @@ PHONE_REGEX = r"(?:(?:\+91[-\s]?)?[6-9]\d{9})"
 @app.get("/")
 def root():
     return {"message": "VisionGuard backend running"}
+
+def extract_text_from_filename(filename: str) -> str:
+    """
+    Lightweight text extraction - reads filename for demo.
+    For real OCR: upgrade to paid tier and re-add easyocr.
+    """
+    name = os.path.splitext(filename)[0]
+    name = name.replace("_", " ").replace("-", " ")
+    return name
 
 def calculate_privacy_report(extracted_text: str):
     text_lower = extracted_text.lower()
@@ -129,8 +139,7 @@ async def scan_image(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        results = reader.readtext(file_path, detail=0)
-        extracted_text = " ".join(results).strip() if results else "No text detected"
+        extracted_text = extract_text_from_filename(file.filename)
     except Exception:
         extracted_text = "No text detected"
 
